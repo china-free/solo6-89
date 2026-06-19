@@ -47,6 +47,13 @@ export interface InputState {
 
 export type GameState = 'title' | 'playing' | 'gameover' | 'delivery-success';
 
+export interface CollisionResult {
+  body: Body;
+  distance: number;
+  relativeSpeed: number;
+  normal: Vec2;
+}
+
 export interface GameConfig {
   G: number;
   softening: number;

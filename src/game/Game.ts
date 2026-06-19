@@ -1,8 +1,8 @@
-import type { Body, Ship, GameState, Mission, Vec2, InputState, GameConfig } from './types';
-import { DEFAULT_CONFIG, integrateShip, predictTrajectory, stepPlanets, vDist, vSub, vLen } from './physics';
+import type { Body, Ship, GameState, Mission, Vec2, InputState, GameConfig, CollisionResult } from './types';
+import { DEFAULT_CONFIG, integrateShip, predictTrajectory, stepPlanets, checkShipCollision, vDist, vSub, vLen } from './physics';
 import { createBodies, createShip, generateStars } from './entities';
 import { drawBackground, drawBody, drawTrajectory, drawShip } from './renderer';
-import { pickRandomTarget, createMission, checkMission } from './mission';
+import { pickRandomTarget, createMission, getMissionInfo } from './mission';
 import { createInput } from './input';
 
 export interface GameStats {
@@ -164,15 +164,9 @@ export class Game {
       this.camera.x += (this.ship.pos.x - this.camera.x) * Math.min(1, dt * 4);
       this.camera.y += (this.ship.pos.y - this.camera.y) * Math.min(1, dt * 4);
 
-      const target = this.bodies.find((b) => b.id === this.mission.targetId);
-      if (target) {
-        const res = checkMission(this.mission, this.bodies, this.ship, this.cfg);
-        this.stats.relativeSpeed = res.relativeSpeed;
-        this.stats.distanceToTarget = Math.max(0, res.distance);
-        if (res.state === 'delivered') {
-          this.onDelivery();
-        }
-      }
+      const info = getMissionInfo(this.mission, this.bodies, this.ship);
+      this.stats.relativeSpeed = info.relativeSpeed;
+      this.stats.distanceToTarget = Math.max(0, info.distance);
 
       if (this.ship.fuel <= 0 && this.stats.state === 'playing') {
         const canReach = this.canReachAnyPlanet();
@@ -189,46 +183,59 @@ export class Game {
   };
 
   private checkCollisions(): void {
-    if (!this.ship.alive) return;
-    for (const b of this.bodies) {
-      const dist = vDist(this.ship.pos, b.pos);
-      if (dist < b.radius + 2) {
-        const relativeSpeed = vLen(vSub(this.ship.vel, b.vel));
-        const isTarget = b.id === this.mission.targetId;
-        if (relativeSpeed > this.cfg.crashMaxSpeed || (b.isStar && relativeSpeed > 40)) {
-          this.ship.alive = false;
-          this.stats.state = 'gameover';
-          if (b.isStar) {
-            this.stats.lastMessage = '恒星吞噬 · 气化殆尽';
-          } else if (isTarget) {
-            this.stats.lastMessage = `任务失败 · 高速撞击 ${b.name}`;
-          } else {
-            this.stats.lastMessage = `撞击 ${b.name} · 粉身碎骨`;
-          }
-        } else {
-          const push = vSub(this.ship.pos, b.pos);
-          const len = Math.hypot(push.x, push.y) || 1;
-          this.ship.pos.x = b.pos.x + (push.x / len) * (b.radius + 3);
-          this.ship.pos.y = b.pos.y + (push.y / len) * (b.radius + 3);
-          this.ship.vel.x = b.vel.x + (push.x / len) * 20;
-          this.ship.vel.y = b.vel.y + (push.y / len) * 20;
-        }
-        return;
+    const hit = checkShipCollision(this.ship, this.bodies);
+    if (!hit) return;
+
+    const { body, relativeSpeed, normal } = hit;
+    const isTarget = body.id === this.mission.targetId;
+
+    if (body.isStar) {
+      this.killShip('恒星吞噬 · 气化殆尽');
+      return;
+    }
+
+    if (isTarget) {
+      if (relativeSpeed <= this.cfg.dockMaxSpeed) {
+        this.onDelivery(hit);
+      } else if (relativeSpeed > this.cfg.crashMaxSpeed) {
+        this.killShip(`任务失败 · 高速撞击 ${body.name}`);
+      } else {
+        this.bounceOff(body, normal, 20);
+      }
+    } else {
+      if (relativeSpeed > this.cfg.crashMaxSpeed) {
+        this.killShip(`撞击 ${body.name} · 粉身碎骨`);
+      } else {
+        this.bounceOff(body, normal, 20);
       }
     }
   }
 
+  private killShip(message: string): void {
+    this.ship.alive = false;
+    this.stats.state = 'gameover';
+    this.stats.lastMessage = message;
+  }
+
+  private bounceOff(body: Body, normal: Vec2, speed: number): void {
+    this.ship.pos.x = body.pos.x + normal.x * (body.radius + 3);
+    this.ship.pos.y = body.pos.y + normal.y * (body.radius + 3);
+    this.ship.vel.x = body.vel.x + normal.x * speed;
+    this.ship.vel.y = body.vel.y + normal.y * speed;
+  }
+
   private deliveryTimerId: ReturnType<typeof setTimeout> | null = null;
 
-  private onDelivery(): void {
-    const target = this.bodies.find((b) => b.id === this.mission.targetId);
-    if (!target) return;
+  private onDelivery(hit: CollisionResult): void {
+    const target = hit.body;
     this.stats.score += this.mission.reward;
     this.stats.deliveries += 1;
     this.ship.fuel = Math.min(this.ship.maxFuel, this.ship.fuel + this.mission.fuelReward);
     this.stats.state = 'delivery-success';
     this.stats.lastMessage = `送达 ${target.name} · +${this.mission.reward} 分 · +${this.mission.fuelReward} 燃料`;
     this.stats.lastMessageTime = this.time;
+
+    this.bounceOff(target, hit.normal, 25);
 
     this.deliveryTimerId = setTimeout(() => {
       this.nextMission();

@@ -1,4 +1,4 @@
-import type { Body, Ship, Mission, GameConfig } from './types';
+import type { Body, Ship, Mission } from './types';
 import { vDist, vSub, vLen } from './physics';
 
 export function pickRandomTarget(bodies: Body[], currentId?: string): Body | undefined {
@@ -16,29 +16,20 @@ export function createMission(target: Body): Mission {
   };
 }
 
-export interface CheckResult {
-  state: Mission['state'] | null;
+export interface MissionInfo {
+  target: Body | undefined;
   relativeSpeed: number;
   distance: number;
 }
 
-export function checkMission(
-  mission: Mission,
-  bodies: Body[],
-  ship: Ship,
-  cfg: GameConfig
-): CheckResult {
+export function getMissionInfo(mission: Mission, bodies: Body[], ship: Ship): MissionInfo {
   const target = bodies.find((b) => b.id === mission.targetId);
-  if (!target) return { state: null, relativeSpeed: 0, distance: Infinity };
+  if (!target) return { target: undefined, relativeSpeed: 0, distance: Infinity };
 
   const distance = vDist(ship.pos, target.pos) - target.radius;
   const relativeSpeed = vLen(vSub(ship.vel, target.vel));
 
-  if (distance < cfg.dockDistance && relativeSpeed < cfg.dockMaxSpeed) {
-    return { state: 'delivered', relativeSpeed, distance };
-  }
-
-  return { state: null, relativeSpeed, distance };
+  return { target, relativeSpeed, distance };
 }
 
 export function formatSpeed(v: number): string {

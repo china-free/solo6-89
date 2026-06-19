@@ -1,4 +1,4 @@
-import type { Vec2, Body, Ship, InputState, GameConfig } from './types';
+import type { Vec2, Body, Ship, InputState, GameConfig, CollisionResult } from './types';
 
 export const DEFAULT_CONFIG: GameConfig = {
   G: 1200,
@@ -181,4 +181,30 @@ export function stepPlanets(bodies: Body[], dt: number): void {
       }
     }
   }
+}
+
+const SHIP_RADIUS = 2;
+
+export function checkShipCollision(ship: Ship, bodies: Body[]): CollisionResult | null {
+  if (!ship.alive) return null;
+  for (const b of bodies) {
+    const dx = ship.pos.x - b.pos.x;
+    const dy = ship.pos.y - b.pos.y;
+    const dist = Math.hypot(dx, dy);
+    const minDist = b.radius + SHIP_RADIUS;
+    if (dist < minDist) {
+      const normal = dist < 1e-6
+        ? { x: 1, y: 0 }
+        : { x: dx / dist, y: dy / dist };
+      const relVel = vSub(ship.vel, b.vel);
+      const relativeSpeed = vLen(relVel);
+      return {
+        body: b,
+        distance: dist,
+        relativeSpeed,
+        normal,
+      };
+    }
+  }
+  return null;
 }
