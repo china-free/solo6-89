@@ -43,6 +43,11 @@ export default function Home() {
     gameRef.current.start();
   };
 
+  const handleContinue = () => {
+    if (!gameRef.current) return;
+    gameRef.current.skipDeliveryAnimation();
+  };
+
   return (
     <div className="relative w-full h-full overflow-hidden">
       <canvas ref={canvasRef} className="block w-full h-full" />
@@ -54,6 +59,7 @@ export default function Home() {
         message={stats.lastMessage}
         onStart={handleStart}
         onRestart={handleRestart}
+        onContinue={handleContinue}
       />
     </div>
   );

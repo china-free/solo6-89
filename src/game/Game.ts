@@ -116,6 +116,10 @@ export class Game {
     this.stats.deliveries = 0;
     this.stats.state = 'playing';
     this.stats.lastMessage = undefined;
+    if (this.deliveryTimerId) {
+      clearTimeout(this.deliveryTimerId);
+      this.deliveryTimerId = null;
+    }
     this.init();
   }
 
@@ -167,8 +171,6 @@ export class Game {
         this.stats.distanceToTarget = Math.max(0, res.distance);
         if (res.state === 'delivered') {
           this.onDelivery();
-        } else if (res.state === 'crashed') {
-          this.onCrash();
         }
       }
 
@@ -192,10 +194,17 @@ export class Game {
       const dist = vDist(this.ship.pos, b.pos);
       if (dist < b.radius + 2) {
         const relativeSpeed = vLen(vSub(this.ship.vel, b.vel));
+        const isTarget = b.id === this.mission.targetId;
         if (relativeSpeed > this.cfg.crashMaxSpeed || (b.isStar && relativeSpeed > 40)) {
           this.ship.alive = false;
           this.stats.state = 'gameover';
-          this.stats.lastMessage = b.isStar ? '恒星吞噬 · 气化殆尽' : `撞击 ${b.name} · 粉身碎骨`;
+          if (b.isStar) {
+            this.stats.lastMessage = '恒星吞噬 · 气化殆尽';
+          } else if (isTarget) {
+            this.stats.lastMessage = `任务失败 · 高速撞击 ${b.name}`;
+          } else {
+            this.stats.lastMessage = `撞击 ${b.name} · 粉身碎骨`;
+          }
         } else {
           const push = vSub(this.ship.pos, b.pos);
           const len = Math.hypot(push.x, push.y) || 1;
@@ -209,6 +218,8 @@ export class Game {
     }
   }
 
+  private deliveryTimerId: ReturnType<typeof setTimeout> | null = null;
+
   private onDelivery(): void {
     const target = this.bodies.find((b) => b.id === this.mission.targetId);
     if (!target) return;
@@ -219,40 +230,33 @@ export class Game {
     this.stats.lastMessage = `送达 ${target.name} · +${this.mission.reward} 分 · +${this.mission.fuelReward} 燃料`;
     this.stats.lastMessageTime = this.time;
 
-    setTimeout(() => {
-      const next = pickRandomTarget(this.bodies, target.id);
-      if (next) {
-        this.mission = createMission(next);
-        this.stats.targetName = next.name;
-        this.stats.missionReward = this.mission.reward;
-        this.mission.state = 'active';
-        if (this.stats.state === 'delivery-success') {
-          this.stats.state = 'playing';
-        }
-      }
+    this.deliveryTimerId = setTimeout(() => {
+      this.nextMission();
     }, 1800);
   }
 
-  private onCrash(): void {
-    const target = this.bodies.find((b) => b.id === this.mission.targetId);
-    if (!target) return;
-    this.ship.fuel = Math.max(0, this.ship.fuel - 30);
-    this.stats.state = 'crash';
-    this.stats.lastMessage = `高速撞击 ${target.name} · -30 燃料`;
-    this.stats.lastMessageTime = this.time;
-
-    const push = vSub(this.ship.pos, target.pos);
-    const len = Math.hypot(push.x, push.y) || 1;
-    this.ship.pos.x = target.pos.x + (push.x / len) * (target.radius + 6);
-    this.ship.pos.y = target.pos.y + (push.y / len) * (target.radius + 6);
-    this.ship.vel.x = target.vel.x + (push.x / len) * 50;
-    this.ship.vel.y = target.vel.y + (push.y / len) * 50;
-
-    setTimeout(() => {
-      if (this.stats.state === 'crash' && this.ship.alive && this.ship.fuel > 0) {
+  private nextMission(): void {
+    const currentTarget = this.mission.targetId;
+    const next = pickRandomTarget(this.bodies, currentTarget);
+    if (next) {
+      this.mission = createMission(next);
+      this.stats.targetName = next.name;
+      this.stats.missionReward = this.mission.reward;
+      this.mission.state = 'active';
+      if (this.stats.state === 'delivery-success') {
         this.stats.state = 'playing';
       }
-    }, 1500);
+    }
+    this.deliveryTimerId = null;
+  }
+
+  skipDeliveryAnimation(): void {
+    if (this.stats.state !== 'delivery-success') return;
+    if (this.deliveryTimerId) {
+      clearTimeout(this.deliveryTimerId);
+      this.deliveryTimerId = null;
+    }
+    this.nextMission();
   }
 
   private canReachAnyPlanet(): boolean {

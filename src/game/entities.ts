@@ -25,7 +25,7 @@ export function createBodies(center: Vec2): Body[] {
 
   for (let i = 0; i < PLANET_DATA.length; i++) {
     const d = PLANET_DATA[i];
-    const orbitSpeed = Math.sqrt(2800 * 1200) / (d.orbitRadius * Math.sqrt(d.orbitRadius)) * 40;
+    const orbitSpeed = Math.sqrt(2800 * 1200) / (d.orbitRadius * Math.sqrt(d.orbitRadius));
     const angle = (i / PLANET_DATA.length) * Math.PI * 2;
     bodies.push({
       id: `planet-${i}`,

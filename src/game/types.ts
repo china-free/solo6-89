@@ -36,7 +36,7 @@ export interface Mission {
   targetId: string;
   reward: number;
   fuelReward: number;
-  state: 'active' | 'delivered' | 'crashed';
+  state: 'active' | 'delivered';
 }
 
 export interface InputState {
@@ -45,7 +45,7 @@ export interface InputState {
   thrust: boolean;
 }
 
-export type GameState = 'title' | 'playing' | 'gameover' | 'delivery-success' | 'crash';
+export type GameState = 'title' | 'playing' | 'gameover' | 'delivery-success';
 
 export interface GameConfig {
   G: number;

@@ -1,26 +1,29 @@
 interface OverlayProps {
-  state: 'title' | 'gameover' | 'delivery-success' | 'crash' | 'playing';
+  state: 'title' | 'gameover' | 'delivery-success' | 'playing';
   score: number;
   deliveries: number;
   message?: string;
   onStart: () => void;
   onRestart: () => void;
+  onContinue?: () => void;
 }
 
-export default function Overlay({ state, score, deliveries, message, onStart, onRestart }: OverlayProps) {
+export default function Overlay({ state, score, deliveries, message, onStart, onRestart, onContinue }: OverlayProps) {
   if (state === 'playing') return null;
 
   const isTitle = state === 'title';
   const isGameOver = state === 'gameover';
+  const isSuccess = state === 'delivery-success';
 
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm scanline z-10">
       <div className="max-w-xl w-full mx-8 text-center">
-        <div className="font-display text-[clamp(2.5rem,6vw,4rem)] font-black text-cyber-cyan glow-text tracking-widest mb-2">
-          {isTitle ? 'DEEP SPACE' : state === 'crash' ? 'HIGH ENERGY IMPACT' : isGameOver ? 'MISSION FAILED' : 'DELIVERY CONFIRMED'}
+        <div className="font-display text-[clamp(2.5rem,6vw,4rem)] font-black glow-text tracking-widest mb-2"
+          style={{ color: isSuccess ? '#5dffb0' : isGameOver ? '#ff5a6a' : '#5ef2ff' }}>
+          {isTitle ? 'DEEP SPACE' : isGameOver ? 'MISSION FAILED' : 'DELIVERY CONFIRMED'}
         </div>
         <div className="font-display text-[clamp(1.2rem,2.5vw,1.6rem)] text-cyber-amber glow-text tracking-[0.4em] mb-8">
-          {isTitle ? 'EXPRESS' : state === 'crash' ? 'WARNING' : isGameOver ? 'ABORT' : 'COMPLETE'}
+          {isTitle ? 'EXPRESS' : isGameOver ? 'ABORT' : 'COMPLETE'}
         </div>
 
         {isTitle && (
@@ -52,7 +55,12 @@ export default function Overlay({ state, score, deliveries, message, onStart, on
               <div><span className="text-cyber-amber">A / ←</span> · 逆时针转船头</div>
               <div><span className="text-cyber-amber">D / →</span> · 顺时针转船头</div>
               <div className="mt-3 text-white/40">虚线为预测未来 10 秒轨迹 · 点火时实时变形</div>
+              <div className="text-white/40">高速撞击任何行星都会粉身碎骨</div>
             </>
+          ) : isSuccess ? (
+            <div className="text-cyber-green/80">
+              漂亮！下一个目标即将刷新...
+            </div>
           ) : (
             <div className="text-cyber-amber/80">
               提示: 先减速到相对目标速度 35 m/s 以内再靠近
@@ -62,9 +70,9 @@ export default function Overlay({ state, score, deliveries, message, onStart, on
 
         <button
           className="cyber-btn px-8 py-3 text-sm font-bold"
-          onClick={isTitle ? onStart : onRestart}
+          onClick={isTitle ? onStart : isSuccess && onContinue ? onContinue : onRestart}
         >
-          {isTitle ? 'INITIATE DELIVERY' : 'RESTART MISSION'}
+          {isTitle ? 'INITIATE DELIVERY' : isSuccess ? 'CONTINUE' : 'RESTART MISSION'}
         </button>
       </div>
     </div>

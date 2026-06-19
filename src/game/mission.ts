@@ -34,16 +34,8 @@ export function checkMission(
   const distance = vDist(ship.pos, target.pos) - target.radius;
   const relativeSpeed = vLen(vSub(ship.vel, target.vel));
 
-  if (distance < 0) {
-    return { state: relativeSpeed > cfg.crashMaxSpeed ? 'crashed' : 'delivered', relativeSpeed, distance };
-  }
-
   if (distance < cfg.dockDistance && relativeSpeed < cfg.dockMaxSpeed) {
     return { state: 'delivered', relativeSpeed, distance };
-  }
-
-  if (distance < cfg.dockDistance && relativeSpeed > cfg.crashMaxSpeed) {
-    return { state: 'crashed', relativeSpeed, distance };
   }
 
   return { state: null, relativeSpeed, distance };
