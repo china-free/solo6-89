@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #050614;
+  font-family: 'Share Tech Mono', monospace;
+  color: #cfe9ff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button {
+  font-family: inherit;
+}
+
+.scanline::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(94, 242, 255, 0.02) 0px,
+    rgba(94, 242, 255, 0.02) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: overlay;
+}
+
+.glow-text {
+  text-shadow: 0 0 10px currentColor;
+}
+
+.hud-panel {
+  background: rgba(10, 14, 34, 0.72);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(94, 242, 255, 0.28);
+  border-radius: 4px;
+  box-shadow: inset 0 0 12px rgba(94, 242, 255, 0.08);
+}
+
+.cyber-btn {
+  border: 1px solid rgba(94, 242, 255, 0.45);
+  background: rgba(94, 242, 255, 0.06);
+  color: #5ef2ff;
+  font-family: 'Orbitron', sans-serif;
+  letter-spacing: 0.08em;
+  transition: all 0.15s ease;
+}
+
+.cyber-btn:hover {
+  background: rgba(94, 242, 255, 0.18);
+  box-shadow: 0 0 18px rgba(94, 242, 255, 0.45);
+}
